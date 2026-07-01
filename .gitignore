@@ -1,0 +1,26 @@
+# secrets & state — NEVER commit
+nango/.env
+mcp-server/.env
+**/.env
+!**/.env.example
+nango/nango-data/
+
+# python
+**/__pycache__/
+*.pyc
+.venv/
+mcp-server/.venv/
+.pytest_cache/
+*.egg-info/
+
+# logs / scratch
+*.log
+nango/pull_err.txt
+
+# self-generated tools awaiting review (never auto-loaded into prod)
+mcp-server/sandbox/*/
+!mcp-server/sandbox/.gitkeep
+!mcp-server/sandbox/README.md
+
+# internal spec — not published
+TZ_personal_content_connectors.md

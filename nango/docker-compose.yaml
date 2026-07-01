@@ -1,0 +1,90 @@
+# Personal Content Connectors — self-hosted Nango
+# Adapted from the official NangoHQ/nango docker-compose for a single-user
+# personal deployment that must COEXIST with already-running containers on this
+# host (bot_postgres :5432, bot_redis :6379). Key deviations from upstream:
+#   * nango-db host port -> 5433 (5432 is taken by bot_postgres)
+#   * nango-redis is NOT published to the host (6379 is taken by bot_redis);
+#     the server reaches it over the internal `nango` network via NANGO_REDIS_URL
+#   * the upstream `providers.yaml` bind-mount is removed — the image already
+#     ships the provider catalog; mounting a non-existent local path would create
+#     a bogus directory and break provider loading in a standalone checkout
+#   * all published ports bound to 127.0.0.1 (personal box, not exposed)
+#   * dashboard protected with basic auth (NANGO_DASHBOARD_USERNAME/PASSWORD)
+#
+# All secrets live in ./.env (git-ignored). Generate it with ./setup.sh.
+
+services:
+  nango-db:
+    # Upstream pins postgres:16.0-alpine; we use 16-alpine which is already
+    # present on this host (bot_postgres) so the DB needs no network pull.
+    # Nango only requires Postgres 16.x.
+    image: postgres:16-alpine
+    container_name: nango-db
+    environment:
+      POSTGRES_PASSWORD: ${NANGO_DB_PASSWORD:-nango}
+      POSTGRES_USER: ${NANGO_DB_USER:-nango}
+      POSTGRES_DB: ${NANGO_DB_NAME:-nango}
+    ports:
+      - '127.0.0.1:${NANGO_DB_PORT:-5433}:5432'
+    volumes:
+      - ./nango-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${NANGO_DB_USER:-nango} -d ${NANGO_DB_NAME:-nango}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - nango
+
+  nango-redis:
+    image: redis:7.2.4
+    container_name: nango-redis
+    # Intentionally NOT published to the host: 6379 belongs to bot_redis.
+    # nango-server talks to it over the `nango` network (see NANGO_REDIS_URL).
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - nango
+
+  nango-server:
+    image: nangohq/nango-server:hosted
+    container_name: nango-server
+    platform: linux/amd64
+    environment:
+      - NANGO_ENCRYPTION_KEY
+      - NANGO_DB_USER
+      - NANGO_DB_PASSWORD
+      - NANGO_DB_HOST=${NANGO_DB_HOST:-nango-db}
+      - NANGO_DB_PORT=5432
+      - NANGO_DB_NAME
+      - NANGO_DB_SSL=false
+      - RECORDS_DATABASE_URL=${RECORDS_DATABASE_URL:-postgresql://${NANGO_DB_USER:-nango}:${NANGO_DB_PASSWORD:-nango}@nango-db:5432/${NANGO_DB_NAME:-nango}}
+      - NANGO_REDIS_URL=redis://nango-redis:6379
+      - SERVER_PORT=${SERVER_PORT:-3003}
+      - CSP_REPORT_ONLY=true
+      - NANGO_SERVER_URL=${NANGO_SERVER_URL:-http://localhost:3003}
+      - NANGO_PUBLIC_SERVER_URL=${NANGO_PUBLIC_SERVER_URL:-http://localhost:3003}
+      - NANGO_PUBLIC_CONNECT_URL=${NANGO_PUBLIC_CONNECT_URL:-http://localhost:3009}
+      - NANGO_DASHBOARD_USERNAME=${NANGO_DASHBOARD_USERNAME:-admin}
+      - NANGO_DASHBOARD_PASSWORD=${NANGO_DASHBOARD_PASSWORD:-changeme}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - NANGO_LOGS_ENABLED=false
+      - FLAG_SERVE_CONNECT_UI=true
+    restart: always
+    ports:
+      - '127.0.0.1:${SERVER_PORT:-3003}:${SERVER_PORT:-3003}'
+      - '127.0.0.1:${CONNECT_UI_PORT:-3009}:${CONNECT_UI_PORT:-3009}'
+    depends_on:
+      nango-db:
+        condition: service_healthy
+      nango-redis:
+        condition: service_healthy
+    networks:
+      - nango
+
+networks:
+  nango:
+    name: broker_nango
