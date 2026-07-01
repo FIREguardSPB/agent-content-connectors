@@ -37,6 +37,7 @@ def _platforms_payload() -> dict:
                 "key": p.key, "label": p.label, "kind": p.kind, "provider": p.provider,
                 "scopes": p.scopes, "console_label": p.console_label, "console_url": p.console_url,
                 "difficulty": p.difficulty, "needs_review": p.needs_review, "notes": p.notes,
+                "steps": p.steps,
             }
             for p in PLATFORMS.values()
         ],
@@ -82,6 +83,7 @@ input.f{width:100%;background:#0c0f1d;border:1px solid #2a3157;color:var(--ink);
 .msg.info{background:rgba(91,140,255,.12);border:1px solid var(--acc);color:#bcd0ff;display:block}
 a{color:var(--acc)}.back{color:var(--mut);cursor:pointer;display:inline-block;margin-bottom:8px}
 .hint{color:var(--mut);font-size:13px}.big{font-weight:600}
+.steps{margin:8px 0;padding-left:22px}.steps li{margin:7px 0}
 </style></head><body><div class="wrap">
 <h1>Подключение аккаунтов</h1><p class="sub">Подключи соцсеть в пару шагов. Токены и пароли остаются на твоём компьютере.</p>
 <div id="home"><div class="cards" id="cards"></div></div>
@@ -102,9 +104,10 @@ function esc(s){return (s||'').replace(/</g,'&lt;')}
 function oauth(){const cb=CFG.callback_url;const scopes=(PF.scopes||[]).join(' ');
  return `<span class="back" onclick="renderHome()">← назад</span>
  <h2>${PF.label}</h2><p class="hint">${esc(PF.notes)}</p>
- <div class="step"><h3><span class="n">1</span>Открой консоль разработчика</h3>
-   <p>Создай OAuth-приложение здесь: <a href="${PF.console_url}" target="_blank">${PF.console_label} →</a><br>
-   <span class="hint">Подробная пошаговая инструкция — в файле <code>docs/USER_ACTIONS.md</code>.</span></p></div>
+ <div class="step"><h3><span class="n">1</span>Создай приложение — по шагам</h3>
+   <p>Открой консоль: <a href="${PF.console_url}" target="_blank">${PF.console_label} →</a></p>
+   <ol class="steps">${(PF.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
+   <p class="hint">Не переживай, если что-то непонятно — просто скажи ассистенту, он проведёт за руку.</p></div>
  <div class="step"><h3><span class="n">2</span>Вставь этот адрес в поле «Redirect URI»</h3>
    <p class="hint">Скопируй один-в-один — любая опечатка ломает вход (ошибка redirect_uri_mismatch).</p>
    <div class="copyrow"><input id="cb" readonly value="${cb}"><button class="ghost" onclick="cp('cb')">Копировать</button></div>

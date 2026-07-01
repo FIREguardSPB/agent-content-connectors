@@ -72,10 +72,18 @@ registering, you should see tools: `youtube_upload`, `youtube_list_videos`,
 `instagram_post`, `instagram_list_media`, `vk_post`, `dzen_*`, `connect_account`,
 `list_connected_accounts`.
 
-### 2.4 Then tell the user (example, in Russian)
-> Всё установил и запустил ✅. Теперь можем подключить твой первый аккаунт — проще
-> всего начать с **YouTube** (~10 минут). Хочешь? Я открою мастер и проведу тебя
-> шаг за шагом.
+### 2.4 Then PROACTIVELY drive the user (do not wait to be asked, do not point at files)
+
+The user may not know anything happened, may not know any files exist, and must
+never be told to "open" or "read" something. **You** explain and **you** lead.
+As soon as setup is green, message the user yourself, e.g.:
+
+> Всё установил и запустил ✅. Теперь ты можешь из чата просить меня публиковать в
+> соцсети — я всё сделаю сам. Осталось один раз подключить аккаунт. Проще всего
+> начать с **YouTube** (минут 10, я проведу тебя за руку по каждому шагу). Начнём?
+
+On "да", **drive the whole thing conversationally**, one step at a time (see §3.1).
+Do not paste a wall of text or send them to a guide — give step 1, wait, then step 2.
 
 ---
 
@@ -83,17 +91,56 @@ registering, you should see tools: `youtube_upload`, `youtube_list_videos`,
 
 - **Assume zero technical knowledge.** No jargon. Never say "OAuth", "token",
   "provider config" to the user — say "подключим аккаунт", "приложение", "ключ".
+- **NEVER tell the user to open, read, or find a file** (not `docs/USER_ACTIONS.md`,
+  not README, not `.env`, nothing). They may not even know files exist. **You** read
+  the references; **you** relay the relevant step to the user in chat. If you catch
+  yourself writing "смотри файл…" / "открой docs/…", stop and paste the actual step.
 - **Do the work; ask the user only for what literally requires their account.** The
   one unavoidable user action is creating an "app" in the platform's console
-  (it's tied to *their* login and can't be automated). Everything else is yours.
-- **When the user must act, give exact, ordered, current steps** — copyable values,
-  what button to click, what they'll see. Use [`docs/USER_ACTIONS.md`](docs/USER_ACTIONS.md),
-  but read it and restate the relevant part; don't just link.
-- **Prefer the web wizard** for connecting accounts — it's the least-friction path:
+  (tied to *their* login, can't be automated). Everything else is yours.
+- **Guide interactively — one step at a time, not a wall of text.** Give a step,
+  wait for "готово" (or a question), then the next step. Confirm what they should see
+  after each step. Offer to troubleshoot the moment something looks off.
+- `docs/USER_ACTIONS.md` and `platforms.py`'s `steps` are YOUR reference for the
+  exact current steps — read them, then narrate. Get live values (callback URL,
+  scopes) from the code, don't recite from memory (§9).
+- **The web wizard is the least-friction path** and now shows the steps *inline* on
+  its own page, so the user reads nothing external:
   ```bash
   mcp-server/.venv/bin/broker-wizard      # opens http://127.0.0.1:8765
   ```
+  Still, you stay in the loop: launch it for them, tell them what they'll see, and
+  narrate alongside — don't just hand them a URL and vanish.
 - Report honestly: if a step fails, say so and fix it; don't claim success you didn't verify.
+
+### 3.1 Worked example — connecting YouTube, fully agent-driven
+
+This is the tone/'granularity to follow (adapt values live from `platforms.py`). Send
+ONE step, wait, then the next. Never dump all of it at once.
+
+> **Ассистент:** Отлично, подключаем YouTube. Открой в браузере
+> `console.cloud.google.com` и войди своим Google-аккаунтом. Открылось? 
+>
+> **Юзер:** да
+>
+> **Ассистент:** Теперь вверху слева нажми на список проектов → «New Project» →
+> впиши любое имя, например `content`, → «Create». Через пару секунд убедись, что
+> сверху выбран именно этот проект. Получилось?
+>
+> …(так же по одному: включить YouTube Data API v3 → настроить экран согласия
+> (External) → добавить свой email в Test users → создать Web-клиент)…
+>
+> **Ассистент:** Сейчас важный момент — адрес возврата. Скопируй вот это **ровно**:
+> `http://localhost:3003/oauth/callback` — и вставь в поле «Authorized redirect
+> URIs» → «Create». (Одна лишняя буква — и вход не сработает, поэтому копируй, не
+> набирай.)
+>
+> **Ассистент:** Появились Client ID и Client secret? Пришли их мне (или вставь в
+> окошко мастера) — дальше я всё сделаю сам: заведу подключение, поймаю вход и
+> сохраню. Тебе останется только войти в Google и нажать «Разрешить».
+
+If Google shows «app isn't verified» — reassure: это нормально в тест-режиме, нажми
+«Дополнительно → Перейти…», и проверь, что твой email добавлен в Test users.
 
 ---
 
@@ -107,9 +154,11 @@ When the user asks to connect/post to a platform, resolve it in this order:
 
 2. **Is the platform known and OAuth-based (YouTube, Instagram, VK)?**
    Check `mcp-server/src/broker_connectors/platforms.py`. If yes:
-   - The user must create an OAuth app once (their only step). Walk them through it
-     from [`docs/USER_ACTIONS.md`](docs/USER_ACTIONS.md), giving the **exact callback URL**
-     to paste (get it live: `python -c "from broker_connectors.platforms import callback_url; print(callback_url())"`).
+   - The user must create an OAuth app once (their only step). **Narrate the steps
+     yourself, one at a time (§3.1)** — your reference is `platforms.py`'s `steps`
+     and `docs/USER_ACTIONS.md`; never send the user to those. Give the **exact
+     callback URL** to paste (get it live:
+     `python -c "from broker_connectors.platforms import callback_url; print(callback_url())"`).
    - Then either open `broker-wizard` (they paste Client ID/Secret, click Connect), or
      do it headless yourself:
      ```bash

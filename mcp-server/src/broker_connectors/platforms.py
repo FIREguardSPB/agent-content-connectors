@@ -33,6 +33,10 @@ class Platform:
     authorization_url: str = ""
     token_url: str = ""
     notes: str = ""
+    # concise, current, user-facing steps to create the OAuth app. Rendered
+    # inline in the wizard AND read aloud step-by-step by the agent — the user
+    # never has to open a file.
+    steps: list[str] = field(default_factory=list)
 
 
 PLATFORMS: dict[str, Platform] = {
@@ -50,6 +54,16 @@ PLATFORMS: dict[str, Platform] = {
         difficulty="лёгкая (начни с неё)",
         notes="Пока приложение в режиме «Testing», логиниться могут только "
         "добавленные тобой тест-пользователи — этого хватает для себя и друзей.",
+        steps=[
+            "Открой console.cloud.google.com и войди своим Google-аккаунтом.",
+            "Вверху слева нажми список проектов → «New Project» → впиши имя → «Create». Убедись, что новый проект выбран.",
+            "В строке поиска вверху набери «YouTube Data API v3» → открой → нажми «Enable».",
+            "Слева: APIs & Services → OAuth consent screen (новый экран «Google Auth Platform») → «Get started»: имя приложения + твоя почта; тип — «External»; контактная почта; согласись → «Create».",
+            "Там же → раздел «Audience» → «Test users» → «Add users» → впиши свой Gmail → «Save».",
+            "Слева «Clients» → «Create client» → тип «Web application».",
+            "В поле «Authorized redirect URIs» → «Add URI» → вставь адрес возврата (кнопка «Копировать» выше) → «Create».",
+            "Появятся Client ID и Client secret — скопируй оба сюда, в поля ниже.",
+        ],
     ),
     "instagram": Platform(
         key="instagram",
@@ -63,6 +77,13 @@ PLATFORMS: dict[str, Platform] = {
         needs_review=True,
         notes="Нужен Instagram-аккаунт типа «Бизнес», привязанный к странице Facebook. "
         "Публикация постов требует прохождения App Review в Meta — это не мгновенно.",
+        steps=[
+            "Открой developers.facebook.com/apps → «Create App» → тип «Business».",
+            "В приложении добавь продукт «Instagram» (Graph API) и «Facebook Login».",
+            "В настройках входа найди «Valid OAuth Redirect URIs» → вставь адрес возврата (кнопка «Копировать» выше).",
+            "Заяви права instagram_business_basic и instagram_business_content_publish и отправь на App Review (это не мгновенно).",
+            "Возьми «App ID» (это Client ID) и «App Secret» (это Client Secret) → вставь сюда, в поля ниже.",
+        ],
     ),
     "vk": Platform(
         key="vk",
@@ -77,6 +98,12 @@ PLATFORMS: dict[str, Platform] = {
         token_url="https://id.vk.com/oauth2/auth",
         notes="В каталоге Nango нет готового провайдера VK, поэтому заводится как "
         "generic OAuth2 с адресами VK ID. Мастер подставит их автоматически.",
+        steps=[
+            "Открой dev.vk.com (или id.vk.com/about/business/go) → создай приложение типа «Веб»/«Сайт».",
+            "В настройках укажи Redirect URI → вставь адрес возврата (кнопка «Копировать» выше).",
+            "Включи права: wall (посты на стену) и offline (долгий доступ).",
+            "Возьми «ID приложения» (Client ID) и «Защищённый ключ» (Client Secret) → вставь сюда, в поля ниже.",
+        ],
     ),
     "dzen": Platform(
         key="dzen",
